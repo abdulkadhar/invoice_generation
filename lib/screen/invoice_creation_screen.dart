@@ -1,14 +1,15 @@
-import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:invoice_generate/model/address_model.dart';
 import 'package:invoice_generate/model/amount_model.dart';
 import 'package:invoice_generate/model/product_detail_model.dart';
+import 'package:invoice_generate/screen/pdf_list_screen.dart';
+import 'package:invoice_generate/screen/pdf_viewer_screen.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 
 class InvoiceCreation extends StatefulWidget {
   const InvoiceCreation({Key? key}) : super(key: key);
@@ -19,13 +20,6 @@ class InvoiceCreation extends StatefulWidget {
 
 class _InvoiceCreationState extends State<InvoiceCreation> {
   final pdf = pw.Document();
-  List<FileSystemEntity> _files = [];
-
-  @override
-  void initState() {
-    super.initState();
-    writeOnPdf();
-  }
 
   pw.SizedBox companySection() {
     return pw.SizedBox(
@@ -278,7 +272,7 @@ class _InvoiceCreationState extends State<InvoiceCreation> {
     );
   }
 
-  writeOnPdf() {
+  void generateInvoice() async {
     pdf.addPage(
       pw.MultiPage(
         // pageTheme: pw.PageTheme(),
@@ -371,21 +365,54 @@ class _InvoiceCreationState extends State<InvoiceCreation> {
         },
       ),
     );
+
+    Directory documentDirectory = await getApplicationDocumentsDirectory();
+    String documentPath = documentDirectory.path;
+    Random random = new Random();
+    int randomNumber = random.nextInt(100);
+    File file = File("$documentPath/generated-pdf-$randomNumber.pdf");
+    await file.writeAsBytes(
+      await pdf.save(),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Pdf generated and stored'),
+        duration: const Duration(seconds: 5),
+      ),
+    );
+    //PDFDocument loadFile = await PDFDocument.fromFile(file);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PdfPreviewScreen(
+          pdfFile: pdf.save(),
+        ),
+      ),
+    );
   }
 
-  Future savePdf() async {
+  void handleGeneratedPdf() async {
+    List<File> pdfs = [];
     Directory documentDirectory = await getApplicationDocumentsDirectory();
-    final sample = documentDirectory.list();
-    sample.listen((file) async {
+    final fileList = documentDirectory.list();
+    fileList.listen((file) async {
       FileStat stat = file.statSync();
       if (stat.type == FileSystemEntityType.file &&
           file.path.endsWith('.pdf')) {
-        print('file path is getting printed' + file.path);
+        pdfs.add(File(file.path));
       }
+    }).onDone(() {
+      print(pdfs.length);
+      print(pdfs[0].path);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => GeneratedPdfPage(
+            files: pdfs,
+          ),
+        ),
+      );
     });
-    String documentPath = documentDirectory.path;
-    File file = File("$documentPath/example.pdf");
-    await file.writeAsBytes(await pdf.save());
   }
 
   @override
@@ -399,27 +426,16 @@ class _InvoiceCreationState extends State<InvoiceCreation> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ElevatedButton(
-              onPressed: () {},
+              onPressed: generateInvoice,
               child: Text("Generate Invoice"),
             ),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: handleGeneratedPdf,
               child: Text("Generated Invoices"),
-            ),
-            ElevatedButton(
-              onPressed: () {},
-              child: Text("Save Invoice"),
             ),
           ],
         ),
       ),
-      // body: PdfPreview(
-      //   canDebug: false,
-      //   canChangePageFormat: false,
-      //   allowPrinting: false,
-      //   canChangeOrientation: false,
-      //   build: (format) => pdf.save(),
-      // ),
     );
   }
 }

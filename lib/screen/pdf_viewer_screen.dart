@@ -1,13 +1,14 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 
 class PdfPreviewScreen extends StatelessWidget {
-  final FutureOr<Uint8List> pdfPreviewData;
+  final FutureOr<Uint8List> pdfFile;
   const PdfPreviewScreen({
     Key? key,
-    required this.pdfPreviewData,
+    required this.pdfFile,
   }) : super(key: key);
 
   @override
@@ -18,11 +19,15 @@ class PdfPreviewScreen extends StatelessWidget {
           "Invoice Preview",
         ),
       ),
+      // body: PDFViewer(
+      //   document: pdfFile,
+      // ),
       body: PdfPreview(
         canChangeOrientation: false,
         canChangePageFormat: false,
         allowPrinting: false,
-        build: (format) => pdfPreviewData,
+        canDebug: false,
+        build: (format) => pdfFile,
       ),
     );
   }
